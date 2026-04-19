@@ -1,0 +1,7 @@
+top=encode83_seg
+
+# 实现一个8-3优先编码器并在七段数码管上显示
+
+x (SW7, SW6, SW5, SW4, SW3, SW2, SW1, SW0)
+en (SW8)
+h (SEG0G, SEG0F, SEG0E, SEG0D, SEG0C, SEG0B, SEG0A)

@@ -1,0 +1,8 @@
+top=register4
+
+# 4位寄存器
+
+load SW0
+clr SW1
+d (SW5, SW4, SW3, SW2)
+q (LD3, LD2, LD1, LD0)

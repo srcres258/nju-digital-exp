@@ -1,0 +1,10 @@
+top=rand_practice
+
+# 上板验证: 利用移位寄存器实现随机数发生器
+
+load BTNL
+clr BTNR
+clk BTNC
+in (SW7, SW6, SW5, SW4, SW3, SW2, SW1, SW0)
+seg1 (SEG1G, SEG1F, SEG1E, SEG1D, SEG1C, SEG1B, SEG1A)
+seg0 (SEG0G, SEG0F, SEG0E, SEG0D, SEG0C, SEG0B, SEG0A)

@@ -1,0 +1,6 @@
+top=bcd7seg
+
+# 七段数码管
+
+b (SW3, SW2, SW1, SW0)
+h (SEG0G, SEG0F, SEG0E, SEG0D, SEG0C, SEG0B, SEG0A)

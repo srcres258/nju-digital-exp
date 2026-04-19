@@ -1,0 +1,9 @@
+top=alu4_practice
+
+# 上板实验: 实现一个带有逻辑运算的简单ALU
+
+func_btn (BTNC)
+a (SW7, SW6, SW5, SW4)
+b (SW3, SW2, SW1, SW0)
+func (LD6, LD5, LD4)
+y (LD3, LD2, LD1, LD0)

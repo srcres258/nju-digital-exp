@@ -1,0 +1,11 @@
+top=top
+
+# 简单组合逻辑电路
+
+a SW0
+b SW1
+c SW2
+
+y LD0
+y LD1
+y LD2

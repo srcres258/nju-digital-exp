@@ -1,0 +1,8 @@
+top=register1
+
+# 1位寄存器
+
+load SW0
+clr SW1
+inp SW2
+q LD0
