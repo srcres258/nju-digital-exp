@@ -24,8 +24,8 @@ module ps2_keyboard (
     input ps2_data,
     output [7:0] data,
     output reg ready,
-    input nextdata_n
-    output reg overflow // fifo overflow
+    input nextdata_n,
+    output reg overflow
 );
     // internal signal, for test
     reg [9:0] buffer; // ps2_data bits
@@ -1132,50 +1132,199 @@ module seg16_8 (
     end
 endmodule
 
-// 将键码转化为ASCII码的ROM
+// 将键盘扫描码转化为ASCII码的ROM（第二套扫描码集）
+// 只映射字母键和数字键
 module keyboard_code_to_ascii_rom (
-    input [7:0] keyboard_code, // 键码
-    output reg [7:0] ascii // ASCII码
+    input [7:0] keyboard_code,
+    output reg [7:0] ascii
 );
     always @(keyboard_code) begin
-        //todo
+        case (keyboard_code)
+            8'h45: ascii = 8'h30; // 0
+            8'h16: ascii = 8'h31; // 1
+            8'h1E: ascii = 8'h32; // 2
+            8'h26: ascii = 8'h33; // 3
+            8'h25: ascii = 8'h34; // 4
+            8'h2E: ascii = 8'h35; // 5
+            8'h36: ascii = 8'h36; // 6
+            8'h3D: ascii = 8'h37; // 7
+            8'h3E: ascii = 8'h38; // 8
+            8'h46: ascii = 8'h39; // 9
+            8'h1C: ascii = 8'h41; // A
+            8'h32: ascii = 8'h42; // B
+            8'h21: ascii = 8'h43; // C
+            8'h23: ascii = 8'h44; // D
+            8'h24: ascii = 8'h45; // E
+            8'h2B: ascii = 8'h46; // F
+            8'h34: ascii = 8'h47; // G
+            8'h33: ascii = 8'h48; // H
+            8'h43: ascii = 8'h49; // I
+            8'h3B: ascii = 8'h4A; // J
+            8'h42: ascii = 8'h4B; // K
+            8'h4B: ascii = 8'h4C; // L
+            8'h3A: ascii = 8'h4D; // M
+            8'h31: ascii = 8'h4E; // N
+            8'h44: ascii = 8'h4F; // O
+            8'h4D: ascii = 8'h50; // P
+            8'h15: ascii = 8'h51; // Q
+            8'h2D: ascii = 8'h52; // R
+            8'h1B: ascii = 8'h53; // S
+            8'h2C: ascii = 8'h54; // T
+            8'h3C: ascii = 8'h55; // U
+            8'h2A: ascii = 8'h56; // V
+            8'h1D: ascii = 8'h57; // W
+            8'h22: ascii = 8'h58; // X
+            8'h35: ascii = 8'h59; // Y
+            8'h1A: ascii = 8'h5A; // Z
+            default: ascii = 8'h00;
+        endcase
     end
 endmodule
 
-// 主模块
-module ps2_keyboard (
-    input clk, // 时钟
-    input ps2_clk, // PS/2 时钟
-    input ps2_data, // PS/2 数据
-    output [6:0] seg3, // 低3位数码管（显示ASCII码）
-    output [6:0] seg2, // 低2位数码管（显示ASCII码）
-    output [6:0] seg1, // 低1位数码管（显示键码）
-    output [6:0] seg0 // 低0位数码管（显示键码）
+// 七段数码管显示单个十六进制数字
+module seg7_hex (
+    input [3:0] in,
+    output reg [6:0] seg
 );
-    wire [7:0] keyboard_code, ascii;
+    always @(in) begin
+        case (in)
+            4'h0: seg = 7'b0111111;
+            4'h1: seg = 7'b0000110;
+            4'h2: seg = 7'b1011011;
+            4'h3: seg = 7'b1001111;
+            4'h4: seg = 7'b1100110;
+            4'h5: seg = 7'b1101101;
+            4'h6: seg = 7'b1111101;
+            4'h7: seg = 7'b0000111;
+            4'h8: seg = 7'b1111111;
+            4'h9: seg = 7'b1101111;
+            4'hA: seg = 7'b1110111;
+            4'hB: seg = 7'b1111100;
+            4'hC: seg = 7'b0111001;
+            4'hD: seg = 7'b1011110;
+            4'hE: seg = 7'b1111001;
+            4'hF: seg = 7'b1110001;
+            default: seg = 7'b0000000;
+        endcase
+    end
+endmodule
 
-    keyboard_code_to_ascii_rom rom(
-        .keyboard_code(keyboard_code),
-        .ascii(ascii)
-    );
+module ps2_keyboard_practice (
+    input clk,
+    input ps2_clk,
+    input ps2_data,
+    output reg [6:0] seg5,
+    output reg [6:0] seg4,
+    output reg [6:0] seg3,
+    output reg [6:0] seg2,
+    output reg [6:0] seg1,
+    output reg [6:0] seg0
+);
+    wire [7:0] keyboard_code;
+    wire ready_wire;
+    reg nextdata_n_reg;
+    reg [7:0] count;
+
+    // 状态机：等待、处理通码、等待断码后键码
+    localparam S_IDLE  = 2'd0;
+    localparam S_MAKE  = 2'd1;
+    localparam S_BREAK = 2'd2;
+    reg [1:0] state;
+
+    reg [7:0] display_code;
+    reg [7:0] display_ascii;
+    reg display_on;
 
     ps2_keyboard keyboard(
         .clk(clk),
-        .clrn(1),
+        .clrn(1'b1),
         .ps2_clk(ps2_clk),
         .ps2_data(ps2_data),
-        .data(keyboard_code)
+        .data(keyboard_code),
+        .ready(ready_wire),
+        .nextdata_n(nextdata_n_reg),
+        .overflow()
     );
 
-    seg16_8 seg0( // 显示键码
-        .in(keyboard_code),
-        .seg1(seg1),
-        .seg0(seg0)
+    keyboard_code_to_ascii_rom rom(
+        .keyboard_code(display_code),
+        .ascii(display_ascii)
     );
 
-    seg16_8 seg1( // 显示ASCII码
-        .in(ascii),
-        .seg1(seg3),
-        .seg0(seg2)
-    );
+    always @(posedge clk) begin
+        nextdata_n_reg <= 1'b1;
+        case (state)
+            S_IDLE: begin
+                if (ready_wire) begin
+                    nextdata_n_reg <= 1'b0;
+                    if (keyboard_code == 8'hF0) begin
+                        state <= S_BREAK;
+                    end else begin
+                        display_code <= keyboard_code;
+                        display_on <= 1'b1;
+                        count <= count + 8'b1;
+                        state <= S_MAKE;
+                    end
+                end
+            end
+            S_MAKE: begin
+                if (ready_wire) begin
+                    nextdata_n_reg <= 1'b0;
+                    if (keyboard_code == 8'hF0) begin
+                        state <= S_BREAK;
+                    end else begin
+                        display_code <= keyboard_code;
+                        count <= count + 8'b1;
+                    end
+                end
+            end
+            S_BREAK: begin
+                if (ready_wire) begin
+                    nextdata_n_reg <= 1'b0;
+                    display_on <= 1'b0;
+                    state <= S_IDLE;
+                end
+            end
+            default: state <= S_IDLE;
+        endcase
+    end
+
+    function [6:0] hex2seg;
+        input [3:0] in;
+        case (in)
+            4'h0: hex2seg = 7'b0111111;
+            4'h1: hex2seg = 7'b0000110;
+            4'h2: hex2seg = 7'b1011011;
+            4'h3: hex2seg = 7'b1001111;
+            4'h4: hex2seg = 7'b1100110;
+            4'h5: hex2seg = 7'b1101101;
+            4'h6: hex2seg = 7'b1111101;
+            4'h7: hex2seg = 7'b0000111;
+            4'h8: hex2seg = 7'b1111111;
+            4'h9: hex2seg = 7'b1101111;
+            4'hA: hex2seg = 7'b1110111;
+            4'hB: hex2seg = 7'b1111100;
+            4'hC: hex2seg = 7'b0111001;
+            4'hD: hex2seg = 7'b1011110;
+            4'hE: hex2seg = 7'b1111001;
+            4'hF: hex2seg = 7'b1110001;
+            default: hex2seg = 7'b0000000;
+        endcase
+    endfunction
+
+    always @(*) begin
+        seg5 = ~hex2seg(count[7:4]);
+        seg4 = ~hex2seg(count[3:0]);
+        if (display_on) begin
+            seg3 = ~hex2seg(display_ascii[7:4]);
+            seg2 = ~hex2seg(display_ascii[3:0]);
+            seg1 = ~hex2seg(display_code[7:4]);
+            seg0 = ~hex2seg(display_code[3:0]);
+        end else begin
+            seg3 = ~7'b0000000;
+            seg2 = ~7'b0000000;
+            seg1 = ~7'b0000000;
+            seg0 = ~7'b0000000;
+        end
+    end
 endmodule

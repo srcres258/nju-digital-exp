@@ -21,15 +21,27 @@
           SDL2
           SDL2.dev
           SDL2_image
-          SDL2_image.dev
           SDL2_ttf
-          SDL2_ttf.dev
           python3
           pkg-config
         ];
         runScript = "bash";
         profile = ''
           export NVBOARD_HOME="$PWD/nvboard"
+
+          mkdir -p /tmp/sdl2-fix
+          cat > /tmp/sdl2-fix/sdl2-config << 'WRAPPER'
+#!/bin/sh
+case "$1" in
+  --cflags) echo "-I/usr/include/SDL2 -D_GNU_SOURCE=1 -D_REENTRANT" ;;
+  --libs) echo "-L/usr/lib -lSDL2" ;;
+  --prefix) echo "/usr" ;;
+  --version) echo "2.32.64" ;;
+  *) echo "Usage: $0 [--prefix] [--version] [--cflags] [--libs]" >&2 ;;
+esac
+WRAPPER
+          chmod +x /tmp/sdl2-fix/sdl2-config
+          export PATH="/tmp/sdl2-fix:$PATH"
         '';
       };
     in
