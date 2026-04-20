@@ -9,10 +9,14 @@
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
+    in
+    {
+      devShells.${system}.default = pkgs.mkShell {
+        nativeBuildInputs = with pkgs; [
+          pkg-config
+        ];
 
-      fhs = pkgs.buildFHSEnv {
-        name = "nju-digital-exp";
-        targetPkgs = pkgs: with pkgs; [
+        buildInputs = with pkgs; [
           coreutils
           findutils
           verilator
@@ -22,34 +26,25 @@
           SDL2.dev
           SDL2_image
           SDL2_ttf
-          python3
-          pkg-config
+          (python3.withPackages (p: [ p.pillow ]))
         ];
-        runScript = "bash";
-        profile = ''
+
+        shellHook = ''
           export NVBOARD_HOME="$PWD/nvboard"
 
-          mkdir -p /tmp/sdl2-fix
-          cat > /tmp/sdl2-fix/sdl2-config << 'WRAPPER'
+          mkdir -p /tmp/nju-digital-exp-bin
+          cat > /tmp/nju-digital-exp-bin/sdl2-config << 'SDL2WRAPPER'
 #!/bin/sh
 case "$1" in
-  --cflags) echo "-I/usr/include/SDL2 -D_GNU_SOURCE=1 -D_REENTRANT" ;;
-  --libs) echo "-L/usr/lib -lSDL2" ;;
-  --prefix) echo "/usr" ;;
-  --version) echo "2.32.64" ;;
-  *) echo "Usage: $0 [--prefix] [--version] [--cflags] [--libs]" >&2 ;;
+    --cflags) pkg-config --cflags sdl2 SDL2_image SDL2_ttf ;;
+    --libs) pkg-config --libs sdl2 SDL2_image SDL2_ttf ;;
+    --prefix) pkg-config --variable=prefix sdl2 ;;
+    --version) pkg-config --modversion sdl2 ;;
+    *) echo "" ;;
 esac
-WRAPPER
-          chmod +x /tmp/sdl2-fix/sdl2-config
-          export PATH="/tmp/sdl2-fix:$PATH"
-        '';
-      };
-    in
-    {
-      devShells.${system}.default = pkgs.mkShell {
-        buildInputs = [ fhs ];
-        shellHook = ''
-          exec ${fhs}/bin/nju-digital-exp
+SDL2WRAPPER
+          chmod +x /tmp/nju-digital-exp-bin/sdl2-config
+          export PATH="/tmp/nju-digital-exp-bin:$PATH"
         '';
       };
     };
