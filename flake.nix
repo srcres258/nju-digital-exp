@@ -19,8 +19,11 @@
           gnumake
           gcc
           SDL2
+          SDL2.dev
           SDL2_image
+          SDL2_image.dev
           SDL2_ttf
+          SDL2_ttf.dev
           python3
           pkg-config
         ];
